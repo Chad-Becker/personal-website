@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import TextField, TextAreaField, SubmitField, validators, HiddenField
 from wtforms.validators import Required, Length
-from flask.ext.mysqldb import MySQL
+from flask_mysqldb import MySQL
 import datetime
 import os
 
@@ -14,7 +14,7 @@ db = MySQL(application)
 
 clientUTCOffset = 0
 
-class visitorsForm(Form):
+class visitorsForm(FlaskForm):
 	firstName = TextField(validators = [Required("Enter your first name"), Length(max = 20, message = "Too many characters")])
 	lastName = TextField(validators = [Required("Enter your last name"), Length(max = 20, message = "Too many characters")])
 	city = TextField("City", validators = [Required("Enter your city"), Length(max = 30, message = "Too many characters")])
@@ -25,7 +25,7 @@ class visitorsForm(Form):
 def index():
 	conn = db.connection
 	cur = conn.cursor()
-	cur.execute('''UPDATE siteHits SET lastHit=%s WHERE id=0;''', (datetime.datetime.utcnow(),))
+	cur.execute('''UPDATE siteHits SET lastHit=%s WHERE id=1;''', (datetime.datetime.utcnow(),))
 	conn.commit()
 	cur.close()
 	return render_template("index.html", form = visitorsForm(), reloadPage = 0)
@@ -51,7 +51,7 @@ def visitorSubmit():
 		if form.validate():
 			conn = db.connection
 			cur = conn.cursor()
-			cur.execute('''INSERT INTO visitorsLog (firstName, lastName, city, stateCountry, visitorLocalTime, utcTime,
+			cur.execute('''INSERT INTO visitorsLog (firstName, lastName, city, stateCountry, visitorLocalOffset, utcTime,
 				comments, reviewed, cleaning) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);''', (request.form["firstName"],
 					request.form["lastName"], request.form["city"], request.form["stateCountry"], getClientOffset(),
 					datetime.datetime.utcnow(), request.form["comments"], 0, 0))
@@ -65,4 +65,4 @@ def visitorSubmit():
 	return redirect(url_for("index", _anchor = "visitorsLog"))
 
 if __name__ == "__main__":
-	application.run()
+	application.run(threaded=True)
